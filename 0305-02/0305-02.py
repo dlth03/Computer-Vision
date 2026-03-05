@@ -4,11 +4,10 @@ import sys         # 프로그램 종료를 위해 사용
 # 이미지 불러오기
 img = cv.imread('soccer.jpg')
 
-# 이미지가 존재하지 않을 경우 프로그램 종료
 if img is None:
     sys.exit('파일이 존재하지 않습니다.')
 
-# 초기 붓 크기 설정
+# 초기 붓 크기
 brush_size = 5
 
 # 마우스 클릭 상태를 저장하는 변수
@@ -46,8 +45,7 @@ cv.namedWindow('Image Display')
 cv.setMouseCallback('Image Display', mouse_event)
 
 while True:
-    cv.imshow('Image Display', img)
-    # 키보드 입력을 1ms 동안 대기   
+    cv.imshow('Image Display', img) 
     key = cv.waitKey(1) & 0xFF
     # '+' 키를 누르면 붓 크기 증가 (최대 15)
     if key == ord('+'):
@@ -55,12 +53,10 @@ while True:
     # '-' 키를 누르면 붓 크기 감소 (최소 1)
     elif key == ord('-'):
         brush_size = max(1, brush_size - 1)
-    # 's' 키를 누르면 프로그램 저장    
-    elif key == ord('s'):
+    # 'q' 키를 누르면 프로그램 저장 후 종료
+    elif key == ord('q'):
         cv.imwrite('paint.jpg', img)
         print("이미지가 저장되었습니다.")
-    # 'q' 키를 누르면 프로그램 종료
-    elif key == ord('q'):
         break
 
 # 모든 OpenCV 창 닫기
