@@ -2,7 +2,7 @@ import cv2 as cv   # OpenCV 라이브러리
 import sys         # 프로그램 종료를 위해 사용
 
 # 이미지 불러오기
-img = cv.imread('soccer.jpg')
+img = cv.imread('soccer.jpg')   # soccer.jpg 이미지를 읽어서 img 변수에 저장
 
 if img is None:
     sys.exit('파일이 존재하지 않습니다.')
@@ -36,17 +36,18 @@ def mouse_event(event, x, y, flags, param):
     # 마우스를 움직일 때
     elif event == cv.EVENT_MOUSEMOVE:
         if drawing_left:    # 왼쪽 버튼 드래그 중이면 파란색으로 그림
-            cv.circle(img, (x, y), brush_size, (255, 0, 0), -1)   # 파란색
+            cv.circle(img, (x, y), brush_size, (255, 0, 0), -1) 
         elif drawing_right: # 오른쪽 버튼 드래그 중이면 빨간색으로 그림
-            cv.circle(img, (x, y), brush_size, (0, 0, 255), -1)   # 빨간색
+            cv.circle(img, (x, y), brush_size, (0, 0, 255), -1) 
 
 
-cv.namedWindow('Image Display')
-cv.setMouseCallback('Image Display', mouse_event)
+cv.namedWindow('Image Display')     # 이미지 창 생성
+cv.setMouseCallback('Image Display', mouse_event)   # 생성한 창에 마우스 이벤트 함수 연결
 
+# 프로그램이 계속 실행되도록 무한 반복
 while True:
-    cv.imshow('Image Display', img) 
-    key = cv.waitKey(1) & 0xFF
+    cv.imshow('Image Display', img) # 현재 이미지를 화면에 출력
+    key = cv.waitKey(1) & 0xFF  # 키보드 입력을 1ms 동안 대기 후 key 변수에 저장
     # '+' 키를 누르면 붓 크기 증가 (최대 15)
     if key == ord('+'):
         brush_size = min(15, brush_size + 1)
