@@ -18,7 +18,7 @@
 
 # 요구사항
 
-* 모든 이미지에서 체크보드 코너를 검
+* 모든 이미지에서 체크보드 코너를 검출
 * 체크 보드의 실제 좌표와 이미지에서 찾은 코너 좌표를 구성
 * cv2.calibrateCamera()를 사용하여 카메라 내부 행렬 k와 왜곡 계수를 구함
 * cv2.undistort()를 사용하여 왜곡 보정한 결과를 시각화
@@ -260,7 +260,7 @@ python 01.Calibration.py
 
 # 0312-02.py
 
-한 장의 이미지에 회전, 크기 조절, 평행 이동을 적용
+* 한 장의 이미지에 회전, 크기 조절, 평행 이동을 적용
 
 ---
 
@@ -456,3 +456,322 @@ python 0312-02.py
 두 이미지를 비교하여 변환 결과를 확인할 수 있다.
 
 <img width="2388" height="816" alt="스크린샷 2026-03-12 123830" src="https://github.com/user-attachments/assets/343d39d5-5872-45fb-a299-e762058c1f2f" />
+
+
+# 0312-03.py
+
+* 같은 장면을 왼쪽 카메라와 오른쪽 카메라에서 촬영한 두 장의 이미지를 이용해 깊이를 추정
+* 두 이미지에서 같은 물체가 얼마나 옆으로 이동해 보이는지 계산하여 물체가 카메라에서 얼마나 떨어져 있는지(depth)를 구할 수 있음
+
+---
+
+# 기능
+
+* 좌/우 스테레오 이미지를 불러온다.
+* 이미지를 그레이스케일로 변환한다.
+* `cv2.StereoBM_create()`를 사용하여 Disparity Map을 계산한다.
+* Disparity 값을 이용하여 Depth Map을 계산한다.
+* ROI 영역(Painting, Frog, Teddy)에 대해 평균 disparity와 평균 depth를 계산한다.
+* 세 ROI 중 가장 가까운 영역과 가장 먼 영역을 분석한다.
+* Disparity Map과 Depth Map을 컬러맵으로 시각화한다.
+* ROI가 표시된 좌/우 이미지와 계산 결과 이미지를 저장한다.
+
+---
+
+# 요구사항
+
+* 입력 이미지를 그레이스케일로 변환한 뒤 `cv2.StereoBM_create()`를 사용하여 disparity map 계산
+* Disparity > 0인 픽셀만 사용하여 depth map 계산
+* ROI Painting, Frog, Teddy 각각에 대해 평균 disparity와 평균 depth를 계산
+* 세 ROI 중 어떤 영역이 가장 가까운지, 어떤 영역이 가장 먼지 해석
+
+---
+
+# 핵심 코드 설명
+
+## 1. 라이브러리 불러오기
+
+```python
+import cv2
+import numpy as np
+from pathlib import Path
+```
+
+* `cv2` : OpenCV 라이브러리
+* `numpy` : 수치 계산 및 배열 처리를 위한 라이브러리
+* `Path` : 파일 경로 및 폴더 생성을 위한 라이브러리
+
+---
+
+## 2. 출력 폴더 생성
+
+```python
+output_dir = Path("./outputs")
+output_dir.mkdir(parents=True, exist_ok=True)
+```
+
+결과 이미지를 저장하기 위한 `outputs` 폴더를 생성한다.
+
+* 폴더가 이미 존재하면 그대로 사용한다.
+* 존재하지 않으면 새로 생성한다.
+
+---
+
+## 3. 스테레오 이미지 불러오기
+
+```python
+left_color = cv2.imread("left.png")
+right_color = cv2.imread("right.png")
+```
+
+좌측 이미지와 우측 이미지를 불러온다.
+
+```python
+if left_color is None or right_color is None:
+    raise FileNotFoundError("좌/우 이미지를 찾지 못했습니다.")
+```
+
+이미지를 찾지 못할 경우 오류를 발생시킨다.
+
+---
+
+## 4. 카메라 파라미터 설정
+
+```python
+f = 700.0
+B = 0.12
+```
+
+Depth 계산에 필요한 카메라 파라미터
+
+* `f` : 카메라 focal length
+* `B` : 두 카메라 사이 거리 (baseline)
+
+---
+
+## 5. ROI 설정
+
+```python
+rois = {
+    "Painting": (55, 50, 130, 110),
+    "Frog": (90, 265, 230, 95),
+    "Teddy": (310, 35, 115, 90)
+}
+```
+
+세 개의 관심 영역(ROI)을 정의한다.
+
+각 ROI는 다음 형식으로 정의된다.
+
+```
+(x 좌표, y 좌표, 너비, 높이)
+```
+
+---
+
+## 6. 그레이스케일 변환
+
+```python
+left_gray = cv2.cvtColor(left_color, cv2.COLOR_BGR2GRAY)
+right_gray = cv2.cvtColor(right_color, cv2.COLOR_BGR2GRAY)
+```
+
+스테레오 매칭을 위해 컬러 이미지를 그레이스케일 이미지로 변환한다.
+
+---
+
+## 7. Disparity Map 계산
+
+```python
+stereo = cv2.StereoBM_create(numDisparities=128, blockSize=15)
+```
+
+StereoBM 알고리즘을 사용하여 disparity 계산 객체를 생성한다.
+
+```python
+disparity = stereo.compute(left_gray, right_gray).astype(np.float32)
+disparity = disparity / 16.0
+```
+
+OpenCV는 disparity 값을 **16배 스케일**로 반환하므로 이를 보정한다.
+
+```python
+valid_mask = disparity > 0
+```
+
+유효한 disparity 픽셀만 선택한다.
+
+---
+
+## 8. Depth Map 계산
+
+Depth는 다음 공식으로 계산된다.
+
+```
+Z = fB / d
+```
+
+* `Z` : Depth (거리)
+* `f` : focal length
+* `B` : baseline
+* `d` : disparity
+
+```python
+depth_map = np.zeros_like(disparity, dtype=np.float32)
+depth_map[valid_mask] = (f * B) / disparity[valid_mask]
+```
+
+Disparity가 **0보다 큰 픽셀만 사용하여 Depth를 계산**한다.
+
+---
+
+## 9. ROI 평균 Disparity / Depth 계산
+
+```python
+for name, (x, y, w, h) in rois.items():
+```
+
+각 ROI 영역을 반복하면서 계산한다.
+
+```python
+disp_roi = disparity[y:y+h, x:x+w]
+depth_roi = depth_map[y:y+h, x:x+w]
+```
+
+ROI 영역을 잘라낸다.
+
+```python
+valid_roi = disp_roi > 0
+```
+
+유효한 disparity 픽셀만 사용한다.
+
+```python
+mean_disp = np.mean(disp_roi[valid_roi])
+mean_depth = np.mean(depth_roi[valid_roi])
+```
+
+ROI 영역의 평균 disparity와 평균 depth를 계산한다.
+
+---
+
+## 10. 가장 가까운 / 먼 ROI 분석
+
+```python
+closest = min(results.items(), key=lambda x: x[1]['mean_depth'])
+farthest = max(results.items(), key=lambda x: x[1]['mean_depth'])
+```
+
+Depth 값이
+
+* **작을수록 가까운 물체**
+* **클수록 먼 물체**
+
+이 기준으로 가장 가까운 ROI와 가장 먼 ROI를 찾는다.
+
+---
+
+## 11. Disparity Map 시각화
+
+```python
+disparity_color = cv2.applyColorMap(disp_vis, cv2.COLORMAP_JET)
+```
+
+컬러맵을 적용하여 disparity를 시각화한다.
+
+색상 의미
+
+* 빨강 : 가까운 영역
+* 파랑 : 먼 영역
+
+---
+
+## 12. Depth Map 시각화
+
+```python
+depth_color = cv2.applyColorMap(depth_vis, cv2.COLORMAP_JET)
+```
+
+Depth 값을 색상으로 변환하여 거리 차이를 시각적으로 확인할 수 있다.
+
+---
+
+## 13. ROI 표시
+
+```python
+cv2.rectangle(left_vis, (x, y), (x + w, y + h), (0, 255, 0), 2)
+```
+
+ROI 영역을 사각형으로 표시한다.
+
+```python
+cv2.putText(left_vis, name, (x, y - 8),
+            cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2)
+```
+
+각 ROI 이름을 이미지 위에 표시한다.
+
+---
+
+## 14. 결과 이미지 저장
+
+```python
+cv2.imwrite("outputs/disparity.png", disparity_color)
+cv2.imwrite("outputs/depth.png", depth_color)
+```
+
+다음 이미지를 저장한다.
+
+* `left_roi.png` : ROI가 표시된 좌 이미지
+* `right_roi.png` : ROI가 표시된 우 이미지
+* `disparity.png` : Disparity Map
+* `depth.png` : Depth Map
+
+---
+
+# 폴더 구조
+
+```
+project_folder
+│
+├ left.png
+├ right.png
+├ 0312-03.py
+│
+├ outputs
+│   ├ left_roi.png
+│   ├ right_roi.png
+│   ├ disparity.png
+│   └ depth.png
+│
+└ README.md
+```
+
+---
+
+# 실행 방법
+
+1. OpenCV 설치
+
+```
+pip install opencv-python
+```
+
+2. 프로그램 실행
+
+```
+python 0312-03.py
+```
+
+---
+
+# 주의사항
+
+* 좌/우 이미지가 정확히 정렬된 스테레오 이미지여야 한다.
+* disparity 값이 0 이하인 경우 depth 계산에 사용할 수 없다.
+* ROI 영역에 유효한 disparity 픽셀이 없으면 평균 값이 계산되지 않을 수 있다.
+* StereoBM 파라미터(`numDisparities`, `blockSize`)에 따라 결과가 달라질 수 있다.
+<img width="1015" height="1023" alt="스크린샷 2026-03-12 164402" src="https://github.com/user-attachments/assets/3d728997-04c4-47ba-8459-32fbe5ab98ff" />
+<img width="266" height="71" alt="스크린샷 2026-03-12 164154" src="https://github.com/user-attachments/assets/0f8dffe4-8c82-4bba-9b9a-9c9de486d8e9" />
+
+
