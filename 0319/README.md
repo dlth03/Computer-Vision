@@ -384,6 +384,212 @@ python 02.canny_hough_line_detection.py
 * 노이즈가 많은 경우 Gaussian Blur를 더 강하게 적용할 수 있다.
 * 너무 많은 선이 검출되면 `threshold`, `minLineLength` 값을 증가시켜야 한다.
 
+<img width="512" height="282" alt="image" src="https://github.com/user-attachments/assets/0b0abc46-7486-4419-82c5-80da52e05f03" />
+
 <img width="1200" height="660" alt="02 canny_hough_line_detection 결과" src="https://github.com/user-attachments/assets/a90f3e0e-897b-4254-af45-cc6212f06008" />
 
 
+# 03.grabcut_segmentation.py
+
+* coffee cup 이미지로 사용자가 지정한 사각형 영역을 바탕으로 GrabCut 알고리즘을 사용하여 객체 추출
+* 객체 추출 결과를 마스크 형태로 시각화
+* 원본 이미지에서 배경을 제거하고 객체만 남은 이미지 출력
+
+---
+
+# 기능
+
+* 이미지를 불러온다.
+* BGR 이미지를 RGB로 변환한다 (matplotlib 출력용).
+* 초기 사각형 영역(ROI)을 설정한다.
+* GrabCut 알고리즘을 수행하여 전경/배경을 분리한다.
+* 마스크를 후처리하여 배경을 제거한다.
+* 원본 이미지, 마스크, 결과 이미지를 시각화한다.
+
+---
+
+# 요구사항
+
+* cv.grabCut()를 사용하여 대화식 분할을 수행
+* 초기 사각형 영역은 (x, y, width, height) 형식으로 설정
+* 마스크를 사용하여 원본 이미지에서 배경을 제거
+* matplotlib를 사용하여 원본 이미지, 마스크 이미지, 배경 제거 이미지 세 개를 나란히 시각화
+
+---
+
+# 핵심 코드 설명
+
+## 1. 라이브러리 불러오기
+
+```python
+import cv2
+import numpy as np
+import matplotlib.pyplot as plt
+```
+
+* `cv2` : OpenCV 라이브러리
+* `numpy` : 마스크 처리 및 배열 연산
+* `matplotlib` : 결과 시각화
+
+---
+
+## 2. 이미지 불러오기
+
+```python
+img = cv2.imread('coffee cup.jpg')
+```
+
+이미지를 BGR 형식으로 불러온다.
+
+```python
+if img is None:
+    print("이미지를 찾을 수 없습니다. 파일명을 확인해주세요.")
+```
+
+이미지가 없을 경우 오류 메시지 출력
+
+---
+
+## 3. BGR → RGB 변환
+
+```python
+img_rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+```
+
+OpenCV는 BGR 형식이므로 matplotlib 출력 시 RGB로 변환한다.
+
+---
+
+## 4. 초기 사각형 영역 설정
+
+```python
+h, w = img.shape[:2]
+rect = (int(w*0.05), int(h*0.05), int(w*0.9), int(h*0.9))
+```
+
+* 이미지의 가장자리 5%를 제외한 영역을 전경 후보로 설정
+* `(x, y, width, height)` 형식
+
+---
+
+## 5. GrabCut 초기화
+
+```python
+mask = np.zeros(img.shape[:2], np.uint8)
+bgdModel = np.zeros((1, 65), np.float64)
+fgdModel = np.zeros((1, 65), np.float64)
+```
+
+* `mask` : 픽셀 분류 결과 저장
+* `bgdModel` : 배경 모델
+* `fgdModel` : 전경 모델
+
+---
+
+## 6. GrabCut 실행
+
+```python
+cv2.grabCut(img, mask, rect, bgdModel, fgdModel, 5, cv2.GC_INIT_WITH_RECT)
+```
+
+* `5` : 반복 횟수
+* `GC_INIT_WITH_RECT` : 사각형 기반 초기화
+
+---
+
+## 7. 마스크 후처리
+
+```python
+mask2 = np.where((mask == 0) | (mask == 2), 0, 1).astype('uint8')
+```
+
+* 0, 2 → 배경
+* 1, 3 → 전경
+
+---
+
+## 8. 배경 제거 이미지 생성
+
+```python
+result = img_rgb * mask2[:, :, np.newaxis]
+```
+
+마스크를 적용하여 전경만 남긴다.
+
+---
+
+## 9. 결과 시각화
+
+```python
+plt.figure(figsize=(15, 5))
+
+plt.subplot(1, 3, 1)
+plt.imshow(img_rgb)
+plt.title('Original Image')
+plt.axis('off')
+
+plt.subplot(1, 3, 2)
+plt.imshow(mask2, cmap='gray')
+plt.title('Mask Image')
+plt.axis('off')
+
+plt.subplot(1, 3, 3)
+plt.imshow(result)
+plt.title('Background Removed')
+plt.axis('off')
+
+plt.tight_layout()
+plt.show()
+```
+
+* 원본 이미지
+* 마스크 이미지
+* 배경 제거 결과
+
+---
+
+# 폴더 구조
+
+```
+project_folder
+│
+├ coffee cup.jpg
+├ 03.grabcut_segmentation.py
+└ README.md
+```
+
+---
+
+# 실행 방법
+
+1. OpenCV 및 matplotlib 설치
+
+```
+pip install opencv-python matplotlib
+```
+
+2. 프로그램 실행
+
+```
+python 03.grabcut_segmentation.py
+```
+
+---
+
+# 결과 설명
+
+* 흰색 영역 → 전경
+* 검은색 영역 → 배경
+
+결과 이미지에서는 배경이 제거되고 **객체(커피컵)**만 남게 된다.
+
+---
+
+# 주의사항
+
+* 입력 이미지 경로 및 파일명을 정확히 입력해야 한다.
+* 초기 사각형(rect)에 따라 결과가 크게 달라진다.
+* 복잡한 배경에서는 완벽하게 분리되지 않을 수 있다.
+* 반복 횟수(iteration)를 늘리면 더 정확한 결과를 얻을 수 있다.
+
+<img width="1498" height="563" alt="03 grabcut_segmentation 결과" src="https://github.com/user-attachments/assets/1463cb66-3806-4324-9cd7-917d64144b42" />
