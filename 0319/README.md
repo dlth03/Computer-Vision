@@ -192,3 +192,198 @@ python 01.sobel_edge_detection.py
 
   <img width="1001" height="559" alt="01 sobel_edge_detection 결과" src="https://github.com/user-attachments/assets/a3701cf1-74d7-4a09-afbb-185dc01c8fad" />
 
+
+# 02.canny_hough_line_detection.py
+
+* dabo 이미지에 캐니 에지 검출을 사용하여 에지 맵 생성
+* 허프 변환을 사용하여 이미지에서 직선 검출
+* 검출된 직선을 원본 이미지에서 빨간색으로 표시
+
+---
+
+# 기능
+
+* 이미지를 불러온다.
+* 이미지를 그레이스케일로 변환한다.
+* Gaussian Blur를 적용하여 노이즈를 제거한다.
+* Canny Edge Detection으로 에지를 검출한다.
+* Hough Transform을 이용하여 직선을 검출한다.
+* 검출된 직선을 원본 이미지 위에 그린다.
+* 원본 이미지와 결과 이미지를 나란히 시각화한다.
+
+---
+
+# 요구사항
+
+* cv.Canny()를 사용하여 에지 맵 생성
+* cv.HoughtLinesP()를 사용하여 직선 검출
+* cv.line()을 사용하여 검출된 직선을 원본 이미지에 그림
+* Matplotlib를 사용하여 원본 이미지와 직선이 그려진 이미지를 나란히 시각화
+
+---
+
+# 핵심 코드 설명
+
+## 1. 라이브러리 불러오기
+
+```python
+import cv2 as cv
+import numpy as np
+import matplotlib.pyplot as plt
+```
+
+* `cv2` : OpenCV 라이브러리
+* `numpy` : 수치 계산 (허프 변환 파라미터)
+* `matplotlib` : 이미지 시각화
+
+---
+
+## 2. 이미지 로드 및 전처리
+
+```python
+img = cv.imread('dabo.jpg')
+gray = cv.cvtColor(img, cv.COLOR_BGR2GRAY)
+```
+
+* 이미지를 불러온 후 그레이스케일로 변환한다.
+
+---
+
+## 3. Gaussian Blur (노이즈 제거)
+
+```python
+blurred = cv.GaussianBlur(gray, (5, 5), 0)
+```
+
+* 커널 크기: (5, 5)
+* 노이즈 제거 및 에지 검출 안정화
+
+---
+
+## 4. Canny Edge Detection
+
+```python
+edges = cv.Canny(blurred, 100, 200)
+```
+
+* `100` : 낮은 임계값
+* `200` : 높은 임계값
+
+에지(윤곽선)를 검출하는 단계
+
+---
+
+## 5. Hough Transform (직선 검출)
+
+```python
+lines = cv.HoughLinesP(
+    edges,
+    rho=1,
+    theta=np.pi/180,
+    threshold=140,
+    minLineLength=90,
+    maxLineGap=10
+)
+```
+
+### 주요 파라미터 설명
+
+* `rho` : 거리 해상도 (픽셀 단위)
+* `theta` : 각도 해상도 (라디안)
+* `threshold` : 직선으로 판단할 최소 투표 수
+* `minLineLength` : 최소 직선 길이
+* `maxLineGap` : 선 사이 최대 허용 간격
+
+→ 불필요한 짧은 선 제거 + 주요 직선만 검출
+
+---
+
+## 6. 직선 그리기
+
+```python
+img_copy = img.copy()
+```
+
+원본 이미지 복사
+
+```python
+if lines is not None:
+    for line in lines:
+        x1, y1, x2, y2 = line[0]
+        cv.line(img_copy, (x1, y1), (x2, y2), (0, 0, 255), 2)
+```
+
+* 검출된 직선을 빨간색으로 표시
+* 두께: 2
+
+---
+
+## 7. 결과 시각화
+
+```python
+plt.figure(figsize=(12, 6))
+
+plt.subplot(1, 2, 1)
+plt.imshow(cv.cvtColor(img, cv.COLOR_BGR2RGB))
+plt.title('Original')
+plt.axis('off')
+
+plt.subplot(1, 2, 2)
+plt.imshow(cv.cvtColor(img_copy, cv.COLOR_BGR2RGB))
+plt.title('Optimized Result')
+plt.axis('off')
+
+plt.tight_layout()
+plt.show()
+```
+
+* 원본 이미지 vs 직선 검출 결과 비교
+
+---
+
+# 폴더 구조
+
+```
+project_folder
+│
+├ dabo.jpg
+├ 02.canny_hough_line_detection.py
+└ README.md
+```
+
+---
+
+# 실행 방법
+
+1. OpenCV 및 matplotlib 설치
+
+```
+pip install opencv-python matplotlib
+```
+
+2. 프로그램 실행
+
+```
+python 02.canny_hough_line_detection.py
+```
+
+---
+
+# 결과 설명
+
+* 빨간 선 → 검출된 직선
+* 주요 구조(건물, 도로, 경계선 등)가 강조됨
+
+---
+
+# 주의사항
+
+* 입력 이미지 경로가 올바른지 확인해야 한다.
+* Canny 임계값에 따라 에지 검출 결과가 달라진다.
+* Hough Transform 파라미터에 따라 직선 검출 결과가 크게 달라진다.
+* 노이즈가 많은 경우 Gaussian Blur를 더 강하게 적용할 수 있다.
+* 너무 많은 선이 검출되면 `threshold`, `minLineLength` 값을 증가시켜야 한다.
+
+<img width="1200" height="660" alt="02 canny_hough_line_detection 결과" src="https://github.com/user-attachments/assets/a90f3e0e-897b-4254-af45-cc6212f06008" />
+
+
