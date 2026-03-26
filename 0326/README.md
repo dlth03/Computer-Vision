@@ -442,3 +442,242 @@ python 02_sift_feature_matching.py
 <img width="293" height="126" alt="02_sift_feature_matching 콘솔" src="https://github.com/user-attachments/assets/668722c2-0bae-4757-87ee-61766fe0f2a7" />
 
 ---
+# 03_image_alignment_homography.py
+
+* SIFT 특징점을 사용하여 두 이미지 간 대응점을 찾고, 이를 바탕으로 호모그래피를 계산하여 하나의 이미지 위에 정렬
+* 샘플파일로 img1.jpg, imag2.jpg, imag3.jpg 중 2개를 선
+
+---
+
+# 기능
+
+* 두 이미지를 불러온다.
+* 이미지를 그레이스케일로 변환한다.
+* SIFT를 이용하여 특징점을 검출하고 descriptor를 계산한다.
+* BFMatcher + KNN 매칭을 수행한다.
+* Lowe’s Ratio Test를 통해 좋은 매칭만 선택한다.
+* RANSAC을 이용하여 호모그래피 행렬을 계산한다.
+* warpPerspective를 이용하여 이미지 정합을 수행한다.
+* 불필요한 영역을 crop하여 결과를 정리한다.
+* 매칭 결과와 정합 결과를 시각화한다.
+* 특징점, 매칭, 호모그래피 정보를 콘솔에 출력한다.
+
+---
+
+# 요구사항
+
+* cv.imread()를 사용하여 두 개의 이미지를 불러옴
+* Cv.SIFT_create()를 사용하여 특징점을 검출
+* cv.BFMatcher()와 knnMatch()를 사용하여 특징점을 매칭하고, 좋은 매칭점만 선별
+* cv.findHomography()를 사용하여 호모그래피 행렬을 계산
+* cv.warpPerspective()를 사용하여 한 이미지를 변환하여 다른 이미지와 정렬
+* 변환된 이미지(Warped Image)와 특징점 매칭 결과(Matching Result)를 나란히 출력
+
+---
+
+# 핵심 코드 설명
+
+## 1. 라이브러리 불러오기
+
+```python
+import cv2 as cv
+import numpy as np
+import matplotlib.pyplot as plt
+```
+
+* `cv2` : OpenCV 라이브러리
+* `numpy` : 좌표 및 행렬 계산
+* `matplotlib` : 결과 시각화
+
+---
+
+## 2. 이미지 불러오기
+
+```python
+img1 = cv.imread('img2.jpg')  # 변환될 이미지
+img2 = cv.imread('img1.jpg')  # 기준 이미지
+```
+
+```python
+if img1 is None or img2 is None:
+    print("이미지를 불러올 수 없습니다.")
+    exit()
+```
+
+---
+
+## 3. 그레이스케일 변환
+
+```python
+gray1 = cv.cvtColor(img1, cv.COLOR_BGR2GRAY)
+gray2 = cv.cvtColor(img2, cv.COLOR_BGR2GRAY)
+```
+
+특징점 검출은 밝기 정보 기반으로 수행
+
+---
+
+## 4. SIFT 특징점 검출
+
+```python
+sift = cv.SIFT_create(nfeatures=300)
+keypoints1, descriptors1 = sift.detectAndCompute(gray1, None)
+keypoints2, descriptors2 = sift.detectAndCompute(gray2, None)
+```
+
+---
+
+## 5. BFMatcher + KNN 매칭
+
+```python
+bf = cv.BFMatcher(cv.NORM_L2)
+matches = bf.knnMatch(descriptors1, descriptors2, k=2)
+```
+
+---
+
+## 6. Lowe's Ratio Test
+
+```python
+good_matches = []
+
+for m, n in matches:
+    if m.distance < 0.7 * n.distance:
+        good_matches.append(m)
+```
+
+잘못된 매칭 제거
+
+---
+
+## 7. 대응점 추출
+
+```python
+src_pts = np.float32([keypoints1[m.queryIdx].pt for m in good_matches]).reshape(-1, 1, 2)
+dst_pts = np.float32([keypoints2[m.trainIdx].pt for m in good_matches]).reshape(-1, 1, 2)
+```
+
+---
+
+## 8. 호모그래피 계산 (RANSAC)
+
+```python
+H, mask = cv.findHomography(src_pts, dst_pts, cv.RANSAC, 5.0)
+```
+
+* 이상치(outlier) 제거
+* 최소 4개 이상의 매칭 필요
+
+---
+
+## 9. 이미지 변환 (Warping)
+
+```python
+warped_img = cv.warpPerspective(img1, H, (w1 + w2, max(h1, h2)))
+```
+
+* img1을 img2 기준으로 변환
+
+---
+
+## 10. 이미지 합성 및 Crop
+
+```python
+result_img[0:h2, 0:w2] = img2
+```
+
+```python
+coords = cv.findNonZero(gray_result)
+x, y, w, h = cv.boundingRect(coords)
+cropped_result = result_img[y:y+h, x:x+w]
+```
+
+불필요한 검은 영역 제거
+
+---
+
+## 11. 매칭 결과 시각화
+
+```python
+match_result = cv.drawMatches(...)
+```
+
+상위 30개 매칭만 표시
+
+---
+
+## 12. 결과 시각화
+
+```python
+plt.figure(figsize=(18, 8))
+
+plt.subplot(1, 2, 1)
+plt.imshow(match_result_rgb)
+plt.title('Matching Result')
+
+plt.subplot(1, 2, 2)
+plt.imshow(cropped_result_rgb)
+plt.title('Warped Image (Image Alignment)')
+```
+
+---
+
+## 13. 콘솔 출력
+
+```python
+print("좋은 매칭 개수:", len(good_matches))
+print("호모그래피 행렬 H:\n", H)
+```
+
+---
+
+# 폴더 구조
+
+```
+project_folder
+│
+├ img1.jpg
+├ img2.jpg
+├ 03_image_alignment_homography.py
+└ README.md
+```
+
+---
+
+# 실행 방법
+
+1. OpenCV 및 matplotlib 설치
+
+```
+pip install opencv-python matplotlib
+```
+
+2. 프로그램 실행
+
+```
+python 03_image_alignment_homography.py
+```
+
+---
+
+# 결과 설명
+
+* 왼쪽 → 특징점 매칭 결과
+* 오른쪽 → 정합된 이미지 결과
+
+→ 두 이미지가 하나의 장면처럼 이어진다.
+
+---
+
+# 주의사항
+
+* 최소 4개 이상의 좋은 매칭이 필요하다.
+* 이미지가 너무 다르면 정합이 실패할 수 있다.
+* Ratio Test 기준(0.7)에 따라 결과가 달라진다.
+* RANSAC threshold 값에 따라 정합 품질이 달라진다.
+* 정합 후 경계 부분이 어색할 수 있다.
+
+<img width="1803" height="862" alt="03_image_alignment_homography 결과" src="https://github.com/user-attachments/assets/81d2106d-ee66-478c-9b9d-cb93484b6ad3" />
+<img width="539" height="287" alt="03_image_alignment_homography 콘솔" src="https://github.com/user-attachments/assets/5b163a4e-3b7d-423f-807a-6d726a7fabee" />
+
+  
