@@ -1,6 +1,6 @@
 # 01_sift_feature_detection.py
 
-주어진 이미지(mot_color70.jpg)를 이용하여 SIFT(Scale-Invariant Feature Transform) 알고리즘을 사용하여 특징점을 검출하고 이를 시각화
+* 주어진 이미지(mot_color70.jpg)를 이용하여 SIFT(Scale-Invariant Feature Transform) 알고리즘을 사용하여 특징점을 검출하고 이를 시각화
 
 ---
 
@@ -204,7 +204,7 @@ python 01_sift_feature_detection.py
 ---
 # 02_sift_feature_matching.py
 
-두 개의 이미지(mot_color70.jpg, mot_color80.jpg)를 입력받아 SIFT 특징점 기반으로 매칭을 수행하고 결과를 시각화
+* 두 개의 이미지(mot_color70.jpg, mot_color83.jpg)를 입력받아 SIFT 특징점 기반으로 매칭을 수행하고 결과를 시각화
 
 ---
 
@@ -224,7 +224,7 @@ python 01_sift_feature_detection.py
 
 * cv.imread()를 사용하여 두 개의 이미지를 불러옴
 * cv.SIFT_create()를 사용하여 특징점을 추출
-* cv.BFMatcher() 또는cv.FlannBasedMatcher()를 사용하여 두 영상 간 특징점을 매칭
+* cv.BFMatcher() 또는 cv.FlannBasedMatcher()를 사용하여 두 영상 간 특징점을 매칭
 * cv.drawMatches()를 사용하여 매칭 결과를 시각화
 * matplotlib을 이용하여 매칭 결과를 출력
 
@@ -445,7 +445,7 @@ python 02_sift_feature_matching.py
 # 03_image_alignment_homography.py
 
 * SIFT 특징점을 사용하여 두 이미지 간 대응점을 찾고, 이를 바탕으로 호모그래피를 계산하여 하나의 이미지 위에 정렬
-* 샘플파일로 img1.jpg, imag2.jpg, imag3.jpg 중 2개를 선
+* 샘플파일로 img1.jpg, img2.jpg, img3.jpg 중 2개를 선택
 
 ---
 
@@ -467,7 +467,7 @@ python 02_sift_feature_matching.py
 # 요구사항
 
 * cv.imread()를 사용하여 두 개의 이미지를 불러옴
-* Cv.SIFT_create()를 사용하여 특징점을 검출
+* cv.SIFT_create()를 사용하여 특징점을 검출
 * cv.BFMatcher()와 knnMatch()를 사용하여 특징점을 매칭하고, 좋은 매칭점만 선별
 * cv.findHomography()를 사용하여 호모그래피 행렬을 계산
 * cv.warpPerspective()를 사용하여 한 이미지를 변환하여 다른 이미지와 정렬
