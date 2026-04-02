@@ -209,7 +209,7 @@ python 01_mnist_classifier.py
 
   <img width="642" height="547" alt="01_mnist_classifier 결과" src="https://github.com/user-attachments/assets/74cada6c-bf0c-4ab7-9541-af8e7cd304b6" />
 <img width="343" height="200" alt="01_mnist_classifier 출력" src="https://github.com/user-attachments/assets/4aa3df81-99c0-4e6e-8769-8e795d4e8ac5" />
-
+-
 
 <img width="640" height="543" alt="01_mnist_classifier 결과2" src="https://github.com/user-attachments/assets/cc7a1a57-530d-4e61-b5c3-9b291936ace8" />
 <img width="480" height="899" alt="01_mnist_classifier 출력2" src="https://github.com/user-attachments/assets/099984ad-5821-4d90-9da9-c78310a9dbae" />
