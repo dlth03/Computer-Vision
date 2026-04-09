@@ -20,7 +20,7 @@
 # 요구사항
 
 * 객체 검출기 구현: YOLOv3와 같은 사전 훈련된 객체 검출 모델을 사용하여 각 프레임에서 객체를 검출합니다.
-* mathworks.com 추적기 초기화: 검출된 객체의 경계 상자를 입력으로 받아 SORT 추적기를 초기화합니다.
+* SORT 추적기 초기화: 검출된 객체의 경계 상자를 입력으로 받아 SORT 추적기를 초기화합니다.
 * 객체 추적: 각 프레임마다 검출된 객체와 기존 추적 객체를 연관시켜 추적을 유지합니다.
 * 결과 시각화: 추적된 각 객체에 고유 ID를 부여하고, 해당 ID와 경계 상자를 비디오 프레임에 표시하여 실시간으로 출력합니다.
 
@@ -229,3 +229,175 @@ python 01_yolo_sort_tracking.py
   <img width="637" height="390" alt="01_yolo_sort_tracking 결과" src="https://github.com/user-attachments/assets/0ab0e5ac-3fc1-4e6e-9aeb-d3eb360ff693" />
 
 <img width="665" height="732" alt="01_yolo_sort_tracking 로그" src="https://github.com/user-attachments/assets/4b328d41-5668-4be7-96ac-8cea91013d8f" />
+
+---
+# 02_mediapipe_face_landmark.py
+
+* Mediapipe의 FaceMesh 모듈을 사용하여 얼굴의 468개 랜드마크를 추출하고, 이를 이미지에 시각화하는 프로그램을 구현합니다.
+---
+
+# 기능
+
+* Mediapipe FaceMesh 모델을 사용하여 이미지에서 얼굴 랜드마크를 검출한다.
+* 검출된 468개의 랜드마크를 이미지 위에 초록색 점으로 시각화한다.
+* FACEMESH_TESSELATION을 사용하여 얼굴 전체에 삼각형 메시 연결선을 그린다.
+* 얼굴 검출 여부를 "Face Detected" / "No Face Detected" 텍스트로 화면에 표시한다.
+* 결과 이미지를 파일로 저장한다.
+* ESC 키를 누르면 프로그램이 종료된다.
+
+---
+
+# 요구사항
+
+* Mediapipe의 FaceMesh 모듈을 사용하여 얼굴 랜드마크 검출기를 초기화합니다.
+* OpenCV를 사용하여 이미지를 불러오고 결과를 화면에 표시합니다.
+* 검출된 얼굴 랜드마크를 이미지에 점으로 표시합니다.
+* ESC 키를 누르면 프로그램이 종료되도록 설정합니다.
+
+
+---
+
+# 핵심 코드 설명
+
+## 1. 라이브러리 불러오기
+```python
+import cv2
+import mediapipe as mp
+import os
+```
+
+* cv2 : OpenCV 라이브러리, 이미지 불러오기, 랜드마크 시각화, 결과 저장 및 화면 출력에 사용
+* mediapipe : FaceMesh 모델을 통해 얼굴 468개 랜드마크를 검출하고 메시 연결선을 그리는 데 사용
+* os : 현재 파일 경로 기준으로 입력/출력 이미지 절대경로를 생성하는 데 사용
+
+---
+
+## 2. Mediapipe FaceMesh 객체 초기화
+```python
+mp_face_mesh = mp.solutions.face_mesh
+mp_drawing = mp.solutions.drawing_utils
+mp_drawing_styles = mp.solutions.drawing_styles
+```
+
+Mediapipe에서 FaceMesh 관련 기능을 불러온다.
+
+* mp_face_mesh : 얼굴 랜드마크 검출 모델을 제공한다.
+* mp_drawing : 이미지 위에 랜드마크와 연결선을 그리는 유틸리티를 제공한다.
+* mp_drawing_styles : 기본 메시 스타일(색상, 두께 등)을 제공한다.
+
+---
+
+## 3. FaceMesh 객체 생성
+```python
+with mp_face_mesh.FaceMesh(
+    static_image_mode=True,
+    max_num_faces=1,
+    refine_landmarks=False,
+    min_detection_confidence=0.5
+) as face_mesh:
+```
+
+FaceMesh 검출기를 생성하고 설정값을 지정한다.
+
+* static_image_mode=True : 정적 이미지를 처리하는 모드로, 비디오 스트림이 아닌 단일 이미지에 적합하다.
+* max_num_faces=1 : 최대 1개의 얼굴만 검출한다.
+* refine_landmarks=False : 기본 FaceMesh 랜드마크를 검출한다.
+* min_detection_confidence=0.5 : 신뢰도 0.5 이상인 검출 결과만 사용한다.
+
+---
+
+## 4. 얼굴 랜드마크 검출
+```python
+rgb_image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+results = face_mesh.process(rgb_image)
+```
+
+이미지를 RGB로 변환한 뒤 FaceMesh로 얼굴 랜드마크를 검출한다.
+
+* OpenCV는 BGR 형식으로 이미지를 불러오므로, Mediapipe 입력에 맞게 RGB로 변환해야 한다.
+* 검출 결과는 results.multi_face_landmarks에 저장되며, 얼굴이 없을 경우 None이 된다.
+
+---
+
+## 5. 얼굴 메시 및 랜드마크 시각화
+```python
+mp_drawing.draw_landmarks(
+    image=image,
+    landmark_list=face_landmarks,
+    connections=mp_face_mesh.FACEMESH_TESSELATION,
+    landmark_drawing_spec=None,
+    connection_drawing_spec=mp_drawing_styles.get_default_face_mesh_tesselation_style()
+)
+
+for landmark in face_landmarks.landmark:
+    x = int(landmark.x * w)
+    y = int(landmark.y * h)
+    cv2.circle(image, (x, y), 1, (0, 255, 0), -1)
+```
+
+검출된 랜드마크를 이미지 위에 시각화한다.
+
+* FACEMESH_TESSELATION : 얼굴 전체를 삼각형 격자(메시) 형태로 연결하는 연결선 정보를 제공한다.
+* 랜드마크 좌표는 0~1 사이의 정규화된 값이므로, 이미지 크기(w, h)를 곱해 실제 픽셀 좌표로 변환한다.
+* cv2.circle로 각 랜드마크 위치에 초록색 점을 그린다.
+
+---
+
+## 6. 결과 저장 및 화면 출력
+```python
+cv2.imwrite(output_image, image)
+cv2.imshow("Mediapipe Face Landmark Image", image)
+
+while True:
+    key = cv2.waitKey(1) & 0xFF
+    if key == 27:
+        break
+```
+
+결과 이미지를 파일로 저장하고 화면에 출력한다.
+
+* cv2.imwrite로 결과 이미지를 parkbogum_result.png 파일로 저장한다.
+* ESC 키(keycode 27)를 누르면 프로그램이 종료된다.
+
+---
+
+# 폴더 구조
+```
+project_folder
+│
+├── 02_mediapipe_face_landmark.py
+├── parkbogum.png
+├── parkbogum_result.png     (실행 후 생성)
+│
+└── README.md
+```
+
+---
+
+# 실행 방법
+
+1. 필요 라이브러리 설치
+```
+pip install opencv-python mediapipe
+```
+
+2. 입력 이미지 준비 (parkbogum.png)
+
+3. 프로그램 실행
+```
+python 02_mediapipe_face_landmark.py
+```
+
+---
+
+# 주의사항
+
+* parkbogum.png 파일이 파이썬 파일과 같은 폴더에 있어야 한다.
+* Mediapipe는 RGB 형식의 이미지를 입력으로 받으므로, OpenCV로 불러온 BGR 이미지를 반드시 변환해야 한다.
+* 랜드마크 좌표는 정규화된 값이므로, 이미지 크기에 맞게 변환이 필요하다.
+* 결과 이미지는 프로그램 실행 폴더에 parkbogum_result.png로 저장된다.
+
+<img width="474" height="474" alt="parkbogum" src="https://github.com/user-attachments/assets/7fe4afc6-94dd-4e54-8148-19b757b27c01" />
+<img width="474" height="474" alt="parkbogum_result" src="https://github.com/user-attachments/assets/d1bbdb1b-ed81-4014-9888-7a434119589e" />
+<img width="686" height="42" alt="02_mediapipe_face_landmark 로그" src="https://github.com/user-attachments/assets/169abe89-89b3-4517-a0d2-a1e66c72a6eb" />
+
